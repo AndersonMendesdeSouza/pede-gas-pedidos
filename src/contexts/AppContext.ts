@@ -8,7 +8,7 @@ export interface AppState {
   logout: () => void;
   reloadUser: () => Promise<void>;
   cart: CartItem[];
-  setQuantity: (productId: string, quantity: number) => void;
+  setQuantity: (productId: string, quantity: number) => boolean;
   clearCart: () => void;
   addresses: Address[];
   addressesLoading: boolean;
@@ -19,7 +19,7 @@ export interface AppState {
   ordersError: string;
   reloadOrders: () => Promise<void>;
   notices: OrderNotice[];
-  markNoticesRead: () => void;
+  markNoticesRead: (id?: string) => void;
   notify: (message: string) => void;
   soundEnabled: boolean;
   toggleSound: () => void;

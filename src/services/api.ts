@@ -55,7 +55,7 @@ async function request<T>(
     /* A API também pode responder texto. */
   }
   if (!response.ok) {
-    if (response.status === 401 && authenticated)
+    if (response.status === 401 && authenticated && getToken() === token)
       window.dispatchEvent(new Event("pedegas:unauthorized"));
     let message = "Não foi possível concluir a operação.";
     if (data && typeof data === "object" && "message" in data) {

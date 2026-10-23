@@ -37,7 +37,7 @@ export default function Notifications() {
           <button
             className="text-button"
             disabled={!notices.some((notice) => !notice.read)}
-            onClick={markNoticesRead}
+            onClick={() => markNoticesRead()}
           >
             Marcar todas como lidas
           </button>
@@ -47,9 +47,8 @@ export default function Notifications() {
         <div>
           <h2>Avisos de pedidos</h2>
           <p className="muted">
-            Você recebe atualizações enquanto o site está aberto. As
-            notificações em segundo plano do aplicativo precisam de uma
-            integração própria para web.
+            Você recebe atualizações enquanto mantém o site aberto. Consulte
+            esta página para ver os avisos dos seus pedidos.
           </p>
         </div>
         <div className="row wrap">
@@ -91,7 +90,7 @@ export default function Notifications() {
             className={`panel notice ${notice.read ? "" : "unread"}`}
             key={notice.id}
             href={`#/pedido/${encodeURIComponent(notice.orderId)}`}
-            onClick={markNoticesRead}
+            onClick={() => markNoticesRead(notice.id)}
           >
             <span className="tile-icon">
               <Icon name="bell" />

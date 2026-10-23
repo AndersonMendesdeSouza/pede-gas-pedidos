@@ -145,9 +145,9 @@ export default function Auth({
           <div className="info-box">
             <h2>Solicitação recebida</h2>
             <p>
-              A API atual ainda não oferece validação de código e redefinição de
-              senha. A senha da sua conta não foi alterada. Entre em contato com
-              a revenda para recuperar o acesso.
+              A recuperação pelo site ainda não está disponível para redefinir
+              sua senha. A senha da sua conta não foi alterada. Entre em contato
+              com a revenda para recuperar o acesso.
             </p>
             <a className="text-button" href="#/entrar">
               Voltar para entrar

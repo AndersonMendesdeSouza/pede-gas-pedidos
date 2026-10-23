@@ -113,44 +113,78 @@ export default function Home() {
             </button>
           ))}
         </div>
-        <div className="product-grid">
-          {visible.map((product) => {
-            const quantity =
-              cart.find((item) => item.productId === product.id)?.quantity ?? 0;
-            return (
-              <article key={product.id} className="product-card">
-                <div className={`product-image ${product.type}`}>
-                  <span className="product-badge">{product.badge}</span>
-                  <img src={product.image} alt={product.title} loading="lazy" />
-                </div>
-                <div className="product-info">
-                  <p className="product-category">
-                    {product.type === "gas" ? "Gás de cozinha" : "Água mineral"}
-                  </p>
-                  <h3>{product.title}</h3>
-                  <p className="muted">{product.description}</p>
-                  <div className="product-bottom">
-                    <div>
-                      <small>A partir de</small>
-                      <strong>{currency(product.price)}</strong>
-                    </div>
-                    <button
-                      className="add-button"
-                      aria-label={`Adicionar ${product.title} ao carrinho`}
-                      onClick={() => {
-                        setQuantity(product.id, quantity + 1);
-                        notify(`${product.title} adicionado ao carrinho.`);
-                      }}
-                    >
-                      <Icon name="plus" />
-                      Adicionar{quantity > 0 && <span>({quantity})</span>}
-                    </button>
-                  </div>
-                </div>
-              </article>
-            );
-          })}
-        </div>
+        {[
+          { type: "gas", title: "Gás" },
+          { type: "water", title: "Água mineral" },
+        ].map((group) => {
+          const groupProducts = visible.filter(
+            (product) => product.type === group.type,
+          );
+          if (!groupProducts.length) return null;
+
+          return (
+            <section
+              key={group.type}
+              className="product-section"
+              aria-labelledby={`products-${group.type}`}
+            >
+              <h3
+                id={`products-${group.type}`}
+                className="product-section-title"
+              >
+                {group.title}
+              </h3>
+              <div className="product-grid">
+                {groupProducts.map((product) => {
+                  const quantity =
+                    cart.find((item) => item.productId === product.id)
+                      ?.quantity ?? 0;
+                  return (
+                    <article key={product.id} className="product-card">
+                      <div className={`product-image ${product.type}`}>
+                        <span className="product-badge">{product.badge}</span>
+                        <img
+                          src={product.image}
+                          alt={product.title}
+                          loading="lazy"
+                        />
+                      </div>
+                      <div className="product-info">
+                        <p className="product-category">
+                          {product.type === "gas"
+                            ? "Gás de cozinha"
+                            : "Água mineral"}
+                        </p>
+                        <h4>{product.title}</h4>
+                        <p className="muted">{product.description}</p>
+                        <div className="product-bottom">
+                          <div>
+                            <small>A partir de</small>
+                            <strong>{currency(product.price)}</strong>
+                          </div>
+                          <button
+                            className="add-button"
+                            aria-label={`Adicionar ${product.title} ao carrinho`}
+                            onClick={() => {
+                              if (setQuantity(product.id, quantity + 1)) {
+                                notify(
+                                  `${product.title} adicionado ao carrinho.`,
+                                );
+                              }
+                            }}
+                          >
+                            <Icon name="plus" />
+                            Adicionar{quantity > 0 && <span>({quantity})</span>}
+                          </button>
+                        </div>
+                      </div>
+                    </article>
+                  );
+                })}
+              </div>
+            </section>
+          );
+        })}
         {!visible.length && (
           <Empty icon="search" title="Nenhum produto encontrado">
             <button

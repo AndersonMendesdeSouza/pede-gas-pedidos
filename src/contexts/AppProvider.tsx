@@ -22,7 +22,7 @@ import alertSound from "../assets/app/audio/audio1.mp3";
 
 export default function AppProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
-  const [authLoading, setAuthLoading] = useState(true);
+  const [authLoading, setAuthLoading] = useState(() => Boolean(getToken()));
   const [cart, setCart] = useState(() =>
     readCart().filter((item) =>
       products.some((product) => product.id === item.productId),
@@ -40,7 +40,7 @@ export default function AppProvider({ children }: { children: ReactNode }) {
   const audio = useRef<HTMLAudioElement | null>(null);
   const seenNotices = useRef<OrderNotice[]>([]);
   const firstOrdersLoaded = useRef(false);
-  const ordersInFlight = useRef(false);
+  const ordersInFlight = useRef<string | null>(null);
   const notify = useCallback((message: string) => setToast(message), []);
 
   const logout = useCallback(() => {
@@ -59,11 +59,7 @@ export default function AppProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     let active = true;
-    if (!getToken()) {
-      setTimeout(() => {
-        if (active) setAuthLoading(false);
-      }, 0);
-    } else {
+    if (getToken()) {
       UserService.me()
         .then((profile) => {
           if (active) setUser(profile);
@@ -119,14 +115,16 @@ export default function AppProvider({ children }: { children: ReactNode }) {
       !Number.isSafeInteger(quantity) ||
       quantity < 0
     )
-      return;
+      return false;
     const next = cart.filter((item) => item.productId !== productId);
     if (quantity > 0) next.push({ productId, quantity });
     try {
       writeStorage("pedegas:cart", next);
       setCart(next);
+      return true;
     } catch (error) {
       notify(errorMessage(error));
+      return false;
     }
   }
   function clearCart() {
@@ -139,94 +137,109 @@ export default function AppProvider({ children }: { children: ReactNode }) {
     }
   }
 
-  const reloadAddresses = useCallback(async () => {
-    if (!user) return;
+  const reloadAddresses = useCallback(() => {
+    if (!user) return Promise.resolve();
     const token = getToken();
-    try {
-      const result = await AddressesService.list();
-      if (getToken() === token) {
-        setAddresses(result);
-        setAddressesError("");
-      }
-    } catch (error) {
-      if (getToken() === token) setAddressesError(errorMessage(error));
-    } finally {
-      setAddressesLoading(false);
-    }
+    return AddressesService.list()
+      .then((result) => {
+        if (getToken() === token) {
+          setAddresses(result);
+          setAddressesError("");
+        }
+      })
+      .catch((error: unknown) => {
+        if (getToken() === token) setAddressesError(errorMessage(error));
+      })
+      .finally(() => {
+        if (getToken() === token) setAddressesLoading(false);
+      });
   }, [user]);
 
-  const reloadOrders = useCallback(async () => {
-    if (!user || ordersInFlight.current) return;
+  const reloadOrders = useCallback(() => {
+    if (!user) return Promise.resolve();
     const token = getToken();
-    ordersInFlight.current = true;
-    try {
-      const result = await OrderService.list();
-      if (getToken() !== token) return;
-      setOrders(result);
-      setOrdersError("");
-      if (!firstOrdersLoaded.current) {
-        const saved = readStorage<unknown>(`pedegas:notices:${user.id}`, []);
-        seenNotices.current = Array.isArray(saved)
-          ? saved.filter(
-              (notice): notice is OrderNotice =>
-                notice &&
-                typeof notice.id === "string" &&
-                typeof notice.orderId === "string" &&
-                typeof notice.title === "string" &&
-                typeof notice.description === "string" &&
-                typeof notice.date === "string" &&
-                typeof notice.read === "boolean",
-            )
-          : [];
-      }
-      const fresh: OrderNotice[] = result
-        .map((order) => ({
-          id: `${order.id}:${order.status}:${order.updatedAt}`,
-          orderId: order.id,
-          title: `Pedido ${statusLabels[order.status].toLowerCase()}`,
-          description: order.items
-            .map((item) => `${item.productQuantity}× ${item.productName}`)
-            .join(", "),
-          date: order.updatedAt,
-          read: false,
-        }))
-        .filter(
-          (notice) =>
-            !seenNotices.current.some((previous) => previous.id === notice.id),
-        );
-      if (firstOrdersLoaded.current && fresh.length) {
-        notify(fresh[0].title);
-        if (soundEnabled && audio.current)
-          void audio.current
-            .play()
-            .catch(() =>
-              notify("Clique em ativar som para permitir os avisos sonoros."),
-            );
-        if ("Notification" in window && Notification.permission === "granted") {
-          try {
-            new Notification(fresh[0].title, { body: fresh[0].description });
-          } catch {
-            /* Alguns navegadores móveis exigem service worker. */
+    if (!token || ordersInFlight.current === token) return Promise.resolve();
+    ordersInFlight.current = token;
+    return OrderService.list()
+      .then((result) => {
+        if (getToken() !== token) return;
+        setOrders(result);
+        setOrdersError("");
+        if (!firstOrdersLoaded.current) {
+          const saved = readStorage<unknown>(`pedegas:notices:${user.id}`, []);
+          seenNotices.current = Array.isArray(saved)
+            ? saved.filter(
+                (notice): notice is OrderNotice =>
+                  notice &&
+                  typeof notice.id === "string" &&
+                  typeof notice.orderId === "string" &&
+                  typeof notice.title === "string" &&
+                  typeof notice.description === "string" &&
+                  typeof notice.date === "string" &&
+                  typeof notice.read === "boolean",
+              )
+            : [];
+        }
+        const fresh: OrderNotice[] = [...result]
+          .sort(
+            (left, right) =>
+              Date.parse(right.updatedAt) - Date.parse(left.updatedAt),
+          )
+          .slice(0, 50)
+          .map((order) => ({
+            id: `${order.id}:${order.status}:${order.updatedAt}`,
+            orderId: order.id,
+            title: `Pedido ${statusLabels[order.status].toLowerCase()}`,
+            description: order.items
+              .map((item) => `${item.productQuantity}× ${item.productName}`)
+              .join(", "),
+            date: order.updatedAt,
+            read: false,
+          }))
+          .filter(
+            (notice) =>
+              !seenNotices.current.some(
+                (previous) => previous.id === notice.id,
+              ),
+          );
+        if (firstOrdersLoaded.current && fresh.length) {
+          notify(fresh[0].title);
+          if (soundEnabled && audio.current)
+            void audio.current
+              .play()
+              .catch(() =>
+                notify("Clique em ativar som para permitir os avisos sonoros."),
+              );
+          if (
+            "Notification" in window &&
+            Notification.permission === "granted"
+          ) {
+            try {
+              new Notification(fresh[0].title, { body: fresh[0].description });
+            } catch {
+              /* Alguns navegadores móveis exigem service worker. */
+            }
           }
         }
-      }
-      const combined = [...fresh, ...seenNotices.current]
-        .sort((left, right) => Date.parse(right.date) - Date.parse(left.date))
-        .slice(0, 50);
-      seenNotices.current = combined;
-      setNotices(combined);
-      try {
-        writeStorage(`pedegas:notices:${user.id}`, combined);
-      } catch {
-        /* Os avisos continuam disponíveis nesta sessão. */
-      }
-      firstOrdersLoaded.current = true;
-    } catch (error) {
-      if (getToken() === token) setOrdersError(errorMessage(error));
-    } finally {
-      ordersInFlight.current = false;
-      setOrdersLoading(false);
-    }
+        const combined = [...fresh, ...seenNotices.current]
+          .sort((left, right) => Date.parse(right.date) - Date.parse(left.date))
+          .slice(0, 50);
+        seenNotices.current = combined;
+        setNotices(combined);
+        try {
+          writeStorage(`pedegas:notices:${user.id}`, combined);
+        } catch {
+          /* Os avisos continuam disponíveis nesta sessão. */
+        }
+        firstOrdersLoaded.current = true;
+      })
+      .catch((error: unknown) => {
+        if (getToken() === token) setOrdersError(errorMessage(error));
+      })
+      .finally(() => {
+        if (ordersInFlight.current === token) ordersInFlight.current = null;
+        if (getToken() === token) setOrdersLoading(false);
+      });
   }, [user, notify, soundEnabled]);
 
   useEffect(() => {
@@ -246,9 +259,12 @@ export default function AppProvider({ children }: { children: ReactNode }) {
     };
   }, [user, reloadAddresses, reloadOrders]);
 
-  function markNoticesRead() {
+  function markNoticesRead(id?: string) {
     if (!user) return;
-    const updated = notices.map((notice) => ({ ...notice, read: true }));
+    const updated = notices.map((notice) => ({
+      ...notice,
+      read: notice.read || !id || notice.id === id,
+    }));
     seenNotices.current = updated;
     setNotices(updated);
     try {
