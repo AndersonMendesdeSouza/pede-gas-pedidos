@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useApp } from "../contexts/AppContext";
 import { products } from "../data/catalog";
 import { currency } from "../utils/order";
+import { navigate } from "../services/navigation";
 import Icon from "../components/Icon";
 import banner from "../assets/app/carousel/img3.png";
 import { Empty } from "../components/ui";
@@ -162,20 +163,37 @@ export default function Home() {
                             <small>A partir de</small>
                             <strong>{currency(product.price)}</strong>
                           </div>
-                          <button
-                            className="add-button"
-                            aria-label={`Adicionar ${product.title} ao carrinho`}
-                            onClick={() => {
-                              if (setQuantity(product.id, quantity + 1)) {
-                                notify(
-                                  `${product.title} adicionado ao carrinho.`,
-                                );
-                              }
-                            }}
-                          >
-                            <Icon name="plus" />
-                            Adicionar{quantity > 0 && <span>({quantity})</span>}
-                          </button>
+                          <div className="product-actions">
+                            <button
+                              type="button"
+                              className="add-button secondary"
+                              aria-label={`Adicionar ${product.title} ao carrinho`}
+                              onClick={() => {
+                                if (setQuantity(product.id, quantity + 1)) {
+                                  notify(
+                                    `${product.title} adicionado ao carrinho.`,
+                                  );
+                                }
+                              }}
+                            >
+                              <Icon name="plus" />
+                              Adicionar
+                              {quantity > 0 && <span>({quantity})</span>}
+                            </button>
+                            <button
+                              type="button"
+                              className="add-button"
+                              aria-label={`Pedir ${product.title} agora`}
+                              onClick={() => {
+                                if (setQuantity(product.id, quantity + 1)) {
+                                  navigate("carrinho");
+                                }
+                              }}
+                            >
+                              <Icon name="cart" />
+                              Pedir agora
+                            </button>
+                          </div>
                         </div>
                       </div>
                     </article>
