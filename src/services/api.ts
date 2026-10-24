@@ -17,8 +17,8 @@ import { getToken } from "./storage";
 //   (import.meta.env.DEV ? "/api" : "http://localhost:3000")
 // ).replace(/\/$/, "");
 
-const baseUrl = "http://localhost:3000";
-// const baseUrl = "https://pede-gas-api.onrender.com";
+// const baseUrl = "http://localhost:3000";
+const baseUrl = "https://pede-gas-api.onrender.com";
 
 export class ApiError extends Error {
   status: number;
