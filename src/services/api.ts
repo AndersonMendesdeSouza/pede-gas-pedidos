@@ -11,10 +11,14 @@ import type {
 import { getToken } from "./storage";
 
 // No desenvolvimento, o proxy do Vite evita depender do CORS da API publicada.
-const baseUrl = (
-  import.meta.env.VITE_API_URL ||
-  (import.meta.env.DEV ? "/api" : "https://pede-gas-api.onrender.com")
-).replace(/\/$/, "");
+// const baseUrl = (
+//   import.meta.env.VITE_API_URL ||
+//   // (import.meta.env.DEV ? "/api" : "https://pede-gas-api.onrender.com")
+//   (import.meta.env.DEV ? "/api" : "http://localhost:3000")
+// ).replace(/\/$/, "");
+
+const baseUrl = "http://localhost:3000";
+// const baseUrl = "https://pede-gas-api.onrender.com";
 
 export class ApiError extends Error {
   status: number;

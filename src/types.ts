@@ -54,19 +54,6 @@ export interface CartItem {
   quantity: number;
 }
 
-export interface Coupon {
-  id: string;
-  code: string;
-  title: string;
-  description: string;
-  rule: string;
-  status: "available" | "progress" | "locked";
-  discount: number;
-  discountLabel: string;
-  expiresAt: string;
-  progress: number;
-}
-
 export interface OrderItemInput {
   productName: string;
   productPrice: string;
@@ -78,8 +65,6 @@ export interface OrderInput {
   paymentMethod: PaymentMethod;
   subtotal: number;
   total: number;
-  couponCode?: string;
-  discountAmount?: number;
   observation?: string;
   deliveryStreet: string;
   deliveryCity: string;

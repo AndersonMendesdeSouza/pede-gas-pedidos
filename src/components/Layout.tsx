@@ -19,7 +19,7 @@ export default function Layout({ children }: { children: ReactNode }) {
     : [
         { route: "inicio", label: "Início", icon: "home" },
         { route: "pedidos", label: "Pedidos", icon: "orders" },
-        { route: "cupons", label: "Cupons", icon: "tag" },
+        { route: "enderecos", label: "Endereços", icon: "pin" },
         { route: "perfil", label: "Perfil", icon: "user" },
       ];
   const count = cart.reduce((sum, item) => sum + item.quantity, 0);

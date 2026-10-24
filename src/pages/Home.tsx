@@ -217,16 +217,6 @@ export default function Home() {
           </Empty>
         )}
       </section>
-      <a className="coupon-banner" href="#/cupons">
-        <span className="tile-icon">
-          <Icon name="tag" size={26} />
-        </span>
-        <div>
-          <h3>Seu pedido pode ter desconto</h3>
-          <p>Confira os cupons disponíveis antes de finalizar.</p>
-        </div>
-        <Icon name="arrow" />
-      </a>
     </>
   );
 }

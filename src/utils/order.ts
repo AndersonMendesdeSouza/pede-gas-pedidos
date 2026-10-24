@@ -1,7 +1,6 @@
 import type {
   Address,
   CartItem,
-  Coupon,
   OrderInput,
   PaymentMethod,
   Product,
@@ -18,25 +17,16 @@ export const formatDate = (value: string) =>
   });
 export const digits = (value: string) => value.replace(/\D/g, "");
 
-export function cartTotals(
-  cart: CartItem[],
-  products: Product[],
-  coupon?: Coupon,
-) {
+export function cartTotals(cart: CartItem[], products: Product[]) {
   const subtotal = roundMoney(
     cart.reduce((sum, item) => {
       const product = products.find((product) => product.id === item.productId);
       return sum + (product?.price ?? 0) * item.quantity;
     }, 0),
   );
-  const discount =
-    coupon?.status === "available"
-      ? roundMoney((subtotal * coupon.discount) / 100)
-      : 0;
   return {
     subtotal,
-    discount,
-    total: roundMoney(Math.max(0, subtotal - discount)),
+    total: subtotal,
   };
 }
 
@@ -45,7 +35,6 @@ export function buildOrder(
   products: Product[],
   address: Address,
   paymentMethod: PaymentMethod,
-  coupon?: Coupon,
   observation?: string,
 ): OrderInput {
   if (!cart.length) throw new Error("Adicione produtos ao carrinho.");
@@ -67,7 +56,7 @@ export function buildOrder(
     !address.state.trim()
   )
     throw new Error("Complete seu endereço de entrega.");
-  const totals = cartTotals(cart, products, coupon);
+  const totals = cartTotals(cart, products);
   const payload: OrderInput = {
     items,
     paymentMethod,
@@ -82,10 +71,6 @@ export function buildOrder(
     deliveryLot: address.lot,
     deliveryComplement: address.complement,
   };
-  if (coupon?.status === "available" && totals.discount > 0) {
-    payload.couponCode = coupon.code;
-    payload.discountAmount = totals.discount;
-  }
   if (observation?.trim()) payload.observation = observation.trim();
   return payload;
 }

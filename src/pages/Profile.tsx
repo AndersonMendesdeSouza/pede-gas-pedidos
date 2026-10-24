@@ -33,16 +33,6 @@ export default function Profile() {
         text: "Veja entregas, status e compras anteriores",
         icon: "orders",
       },
-      ...(user.role === "admin"
-        ? []
-        : [
-            {
-              route: "cupons",
-              title: "Meus cupons",
-              text: "Confira os benefícios disponíveis",
-              icon: "tag" as const,
-            },
-          ]),
       {
         route: "notificacoes",
         title: "Notificações",

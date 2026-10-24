@@ -1,7 +1,7 @@
 import { useRef, useState } from "react";
 import type { FormEvent } from "react";
 import { useApp } from "../contexts/AppContext";
-import { coupons, paymentLabels, products } from "../data/catalog";
+import { paymentLabels, products } from "../data/catalog";
 import {
   addressLabel,
   buildOrder,
@@ -29,38 +29,17 @@ export default function Cart() {
     notify,
   } = useApp();
   const [step, setStep] = useState<"products" | "checkout">("products");
-  const [couponCode, setCouponCode] = useState("");
-  const [couponId, setCouponId] = useState("");
-  const [couponError, setCouponError] = useState("");
   const [addressId, setAddressId] = useState("");
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("pix");
   const [observation, setObservation] = useState("");
   const [busy, setBusy] = useState(false);
   const creatingOrder = useRef(false);
   const [error, setError] = useState("");
-  const coupon = coupons.find(
-    (coupon) => coupon.id === couponId && coupon.status === "available",
-  );
-  const totals = cartTotals(cart, products, coupon);
+  const totals = cartTotals(cart, products);
   const address =
     addresses.find((address) => address.id === addressId) ??
     addresses.find((address) => address.default);
 
-  function applyCoupon(event: FormEvent) {
-    event.preventDefault();
-    const found = coupons.find(
-      (coupon) =>
-        coupon.code === couponCode.trim().toUpperCase() &&
-        coupon.status === "available",
-    );
-    if (!found) {
-      setCouponError("Cupom inválido ou indisponível.");
-      return;
-    }
-    setCouponId(found.id);
-    setCouponError("");
-    notify("Cupom aplicado.");
-  }
   async function placeOrder(event: FormEvent) {
     event.preventDefault();
     if (creatingOrder.current) return;
@@ -77,7 +56,7 @@ export default function Cart() {
     setError("");
     try {
       const order = await OrderService.create(
-        buildOrder(cart, products, address, paymentMethod, coupon, observation),
+        buildOrder(cart, products, address, paymentMethod, observation),
       );
       clearCart();
       notify("Pedido enviado! Acompanhe a confirmação da revenda.");
@@ -305,52 +284,7 @@ export default function Cart() {
               <span>Entrega</span>
               <strong className="success">Grátis</strong>
             </p>
-            {coupon && (
-              <p>
-                <span>Desconto ({coupon.code})</span>
-                <strong className="success">
-                  − {currency(totals.discount)}
-                </strong>
-              </p>
-            )}
           </div>
-          <form onSubmit={applyCoupon} className="coupon-form">
-            <label className="field">
-              <span>Tem um cupom?</span>
-              <div className="row">
-                <input
-                  value={couponCode}
-                  onChange={(event) => setCouponCode(event.target.value)}
-                  placeholder="Digite o código"
-                  aria-label="Código do cupom"
-                  disabled={busy}
-                />
-                <button className="button secondary" disabled={busy}>
-                  Aplicar
-                </button>
-              </div>
-            </label>
-            {couponError && (
-              <p className="field-error" role="alert">
-                {couponError}
-              </p>
-            )}
-          </form>
-          {coupon && (
-            <button
-              className="text-button"
-              disabled={busy}
-              onClick={() => {
-                setCouponId("");
-                setCouponCode("");
-              }}
-            >
-              Remover cupom
-            </button>
-          )}
-          <a href="#/cupons" className="text-button small">
-            Ver cupons disponíveis
-          </a>
           <p className="summary-total">
             <span>Total</span>
             <strong>{currency(totals.total)}</strong>

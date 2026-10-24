@@ -408,12 +408,6 @@ export function OrderTrack({ id }: { id: string }) {
                     <strong>{currency(item.total)}</strong>
                   </p>
                 ))}
-                {Number(order.discountAmount) > 0 && (
-                  <p>
-                    <span>Cupom {order.couponCode}</span>
-                    <strong>−{currency(order.discountAmount!)}</strong>
-                  </p>
-                )}
                 <p>
                   <span>Pagamento na entrega</span>
                   <strong>{paymentLabels[order.paymentMethod]}</strong>

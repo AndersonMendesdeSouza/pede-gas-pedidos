@@ -7,6 +7,27 @@ import { createServer } from "vite";
 // Complementa os testes de contrato; não substitui a inspeção visual no navegador.
 test("telas renderizam dados de cliente, administrador e estados vazios", async () => {
   const vite = await createServer({
+    plugins: [
+      {
+        name: "layout-test-route",
+        enforce: "pre",
+        transform(source, id) {
+          if (id.endsWith("/components/Layout.tsx"))
+            return source.replace(
+              '"../services/navigation"',
+              '"virtual:layout-test-route"',
+            );
+        },
+        resolveId(source) {
+          if (source === "virtual:layout-test-route")
+            return "\0layout-test-route";
+        },
+        load(id) {
+          if (id === "\0layout-test-route")
+            return 'export const useRoute = () => "enderecos";';
+        },
+      },
+    ],
     server: { middlewareMode: true, hmr: false, ws: false },
     appType: "custom",
     mode: "test",
@@ -57,6 +78,24 @@ test("telas renderizam dados de cliente, administrador e estados vazios", async 
           createElement(component, props),
         ),
       );
+    const Layout = (await vite.ssrLoadModule("/src/components/Layout.tsx"))
+      .default;
+    const layout = render(Layout);
+    for (const className of ["desktop-nav", "mobile-nav"]) {
+      const navigation = layout.match(
+        new RegExp(`<nav class="${className}"[^>]*>(.*?)</nav>`),
+      )?.[1];
+      assert.ok(navigation, className);
+      assert.deepEqual(
+        [...navigation.matchAll(/href="#\/(.*?)"/g)].map((match) => match[1]),
+        ["inicio", "pedidos", "enderecos", "perfil"],
+      );
+      assert.match(
+        navigation,
+        /href="#\/enderecos" class="active" aria-current="page"/,
+      );
+      assert.ok(navigation.includes("Endereços"));
+    }
     const Home = (await vite.ssrLoadModule("/src/pages/Home.tsx")).default;
     assert.match(render(Home), /Água Mineral Goya 20L/);
     assert.match(render(Home), /Botijão de Gás P45/);
@@ -71,6 +110,41 @@ test("telas renderizam dados de cliente, administrador e estados vazios", async 
     const Addresses = (await vite.ssrLoadModule("/src/pages/Addresses.tsx"))
       .default;
     assert.match(render(Addresses), /Cadastre seu primeiro endereço/);
+    assert.match(render(Addresses, { ...state, user: null }), /Entre na sua conta/);
+    const addresses = render(Addresses, {
+      ...state,
+      addresses: [
+        {
+          id: "default-address",
+          name: "Casa",
+          street: "Rua principal",
+          number: "10",
+          city: "Buriti Alegre",
+          state: "GO",
+          default: true,
+        },
+        {
+          id: "other-address",
+          name: "Trabalho",
+          street: "Rua de teste",
+          number: "20",
+          city: "Buriti Alegre",
+          state: "GO",
+          default: false,
+        },
+      ],
+    });
+    for (const text of [
+      "Meus endereços",
+      "Novo endereço",
+      "Casa",
+      "Trabalho",
+      "Entrega padrão",
+      "Entregar aqui",
+      "Desmarcar padrão",
+      "Editar",
+      "Excluir",
+    ]) assert.ok(addresses.includes(text), text);
     const { default: Profile, EditProfile } = await vite.ssrLoadModule(
       "/src/pages/Profile.tsx",
     );
@@ -80,9 +154,6 @@ test("telas renderizam dados de cliente, administrador e estados vazios", async 
       /Entre na sua conta/,
     );
     assert.match(render(EditProfile), /Salvar alterações/);
-    const Coupons = (await vite.ssrLoadModule("/src/pages/Coupons.tsx"))
-      .default;
-    assert.match(render(Coupons), /PRIMEIRA10/);
     const Orders = (await vite.ssrLoadModule("/src/pages/Orders.tsx")).default;
     assert.match(render(Orders), /Nenhum pedido por aqui/);
     const order = {

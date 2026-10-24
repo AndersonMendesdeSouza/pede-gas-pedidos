@@ -9,7 +9,6 @@ import Home from "./pages/Home";
 import Auth from "./pages/Auth";
 import Cart from "./pages/Cart";
 import Addresses from "./pages/Addresses";
-import Coupons from "./pages/Coupons";
 import Orders, { OrderTrack } from "./pages/Orders";
 import Profile, { EditProfile } from "./pages/Profile";
 import Admin from "./pages/Admin";
@@ -32,7 +31,6 @@ function Router() {
     page = <Auth key={path} mode={path} />;
   else if (path === "carrinho") page = <Cart />;
   else if (path === "enderecos") page = <Addresses />;
-  else if (path === "cupons") page = <Coupons />;
   else if (path === "pedidos") page = <Orders />;
   else if (path === "pedido" && id) page = <OrderTrack key={id} id={id} />;
   else if (path === "perfil") page = <Profile />;

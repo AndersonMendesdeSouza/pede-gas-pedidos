@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { buildOrder, cartTotals } from "../src/utils/order.ts";
-import type { Address, Coupon, Product } from "../src/types.ts";
+import type { Address, Product } from "../src/types.ts";
 
 const products: Product[] = [
   {
@@ -23,18 +23,6 @@ const products: Product[] = [
     badge: "",
   },
 ];
-const coupon: Coupon = {
-  id: "first",
-  code: "PRIMEIRA10",
-  title: "",
-  description: "",
-  rule: "",
-  status: "available",
-  discount: 10,
-  discountLabel: "10%",
-  expiresAt: "",
-  progress: 1,
-};
 const address: Address = {
   id: "address-1",
   name: "Casa",
@@ -51,7 +39,7 @@ const address: Address = {
   default: true,
 };
 
-test("calcula quantidades, subtotal e desconto em centavos", () => {
+test("calcula subtotal e total pela soma dos produtos", () => {
   assert.deepEqual(
     cartTotals(
       [
@@ -59,35 +47,28 @@ test("calcula quantidades, subtotal e desconto em centavos", () => {
         { productId: "water", quantity: 3 },
       ],
       products,
-      coupon,
     ),
-    { subtotal: 284, discount: 28.4, total: 255.6 },
+    { subtotal: 284, total: 284 },
   );
 });
-test("não aplica cupom bloqueado ou em progresso", () => {
-  for (const status of ["locked", "progress"] as const) {
-    assert.deepEqual(
-      cartTotals([{ productId: "gas", quantity: 1 }], products, {
-        ...coupon,
-        status,
-      }),
-      { subtotal: 115, discount: 0, total: 115 },
-    );
-  }
+test("arredonda o total em centavos e aceita carrinho vazio", () => {
+  const decimalProducts = [{ ...products[0], price: 19.9 }];
+  assert.deepEqual(
+    cartTotals([{ productId: "gas", quantity: 3 }], decimalProducts),
+    { subtotal: 59.7, total: 59.7 },
+  );
+  assert.deepEqual(cartTotals([], products), { subtotal: 0, total: 0 });
 });
-test("monta o contrato da API com endereço completo e desconto", () => {
+test("monta o contrato da API com endereço completo e observação", () => {
   const order = buildOrder(
     [{ productId: "gas", quantity: 2 }],
     products,
     address,
     "pix",
-    coupon,
     "  Avisar na chegada  ",
   );
   assert.equal(order.subtotal, 230);
-  assert.equal(order.total, 207);
-  assert.equal(order.discountAmount, 23);
-  assert.equal(order.couponCode, "PRIMEIRA10");
+  assert.equal(order.total, 230);
   assert.equal(order.deliveryStreet, address.street);
   assert.equal(order.deliveryBlock, "2");
   assert.equal(order.deliveryLot, "3");
@@ -104,8 +85,23 @@ test("monta o contrato da API com endereço completo e desconto", () => {
   ]);
   assert.equal("id" in order, false);
   assert.equal("userId" in order, false);
+  assert.deepEqual(Object.keys(order).sort(), [
+    "deliveryBlock",
+    "deliveryCity",
+    "deliveryComplement",
+    "deliveryLot",
+    "deliveryNeighborhood",
+    "deliveryNumber",
+    "deliveryState",
+    "deliveryStreet",
+    "items",
+    "observation",
+    "paymentMethod",
+    "subtotal",
+    "total",
+  ]);
 });
-test("envia todas as formas de pagamento e omite cupom quando não aplicado", () => {
+test("envia todas as formas de pagamento e omite observação vazia", () => {
   for (const method of ["pix", "card", "cash"] as const) {
     const order = buildOrder(
       [{ productId: "water", quantity: 1 }],
@@ -115,8 +111,7 @@ test("envia todas as formas de pagamento e omite cupom quando não aplicado", ()
     );
     assert.equal(order.paymentMethod, method);
     assert.equal(order.total, 18);
-    assert.equal("couponCode" in order, false);
-    assert.equal("discountAmount" in order, false);
+    assert.equal("observation" in order, false);
   }
 });
 test("rejeita carrinho vazio, produto inexistente e quantidades inválidas", () => {
